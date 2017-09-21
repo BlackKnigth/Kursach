@@ -9,25 +9,41 @@ using namespace sf;
 
 struct kursor
 {
-	float x, y;
-	int str, stb;
+	int x, y;
+	int fx, fy;
 	kursor() 
 	{
 		x = 1;
 		y = 1;
-		str = 1;
-		stb = 1;
+		fx = 1;
+		fy = 1;
 	}
 };
 
-void delbkv(wstring* , int , int );
+void refreshFile(int fy, wstring str)
+{
+	wifstream in("input_copy.txt");
+	wofstream out("input_copy2.txt");
+	in.imbue(locale(""));
+	out.imbue(locale(""));
+	wstring s;
+	for (int i = 0; i < fy; i++) { getline(in, s); out << s << endl; }
+	getline(in, s);
+	out << str;
+	while (!in.eof()) { getline(in, s); out << endl << s; }
+	in.close();
+	out.close();
+	rename("input_copy.txt", "input_copy3.txt");
+	rename("input_copy2.txt", "input_copy.txt");
+	remove("input_copy3.txt");
+} 
 
-void refreshFile(wifstream &fin, Text *text, wstring *str, int krs, int y = 0)
+void refreshStr(wifstream &fin, Text *text, wstring *str, int krs, int y)
 {
 	int i = 0;
-	fin.open("input.txt");
+	fin.open("input_copy.txt");
 	fin.imbue(locale(""));
-	for (i = 1; i < krs - y; i++) { getline(fin, str[0]); }
+	for (i; i < krs - y; i++) { getline(fin, str[0]); }
 	i = 0;
 	while (!fin.eof() && i < 23)
 	{
@@ -38,21 +54,54 @@ void refreshFile(wifstream &fin, Text *text, wstring *str, int krs, int y = 0)
 	fin.close();
 }
 
-void krsrun(VertexArray &, bool &, float &);
+void krsrun(VertexArray &lines, bool &bt, float &timer)
+{
+	lines[0].color = Color::Black;
+	lines[1].color = Color::Black;
+	bt = true;
+	timer = 0;
+}
 
-bool chkfl(wifstream &,int);
+bool chkfl(wifstream &fin, int stb)
+{
+	wstring str;
+	int i;
+	fin.open("input_copy.txt");
+	for (i = 0; !fin.eof(); i++) { getline(fin, str); }
+	fin.close();
+	if (i > stb)
+		return true;
+	else
+		return false;
+}
+
+void createCopy()
+{
+	wifstream in;
+	wofstream out("input_copy.txt");
+	in.open("input.txt");
+	in.imbue(locale(""));
+	out.imbue(locale(""));
+	wstring s;
+	if (in)
+		while (!in.eof())
+			getline(in, s), out << s << endl;
+	out.close();
+	in.close();
+}
 
 int main()
 {
 	kursor *krs;
 	krs = new kursor;
 
-
+	int wid = 698;
+	int hei = 350;
 	VertexArray qvadra(LinesStrip, 5 );//‡·.ÔÓÎÂ
 	qvadra[0].position = Vector2f(0, 1);
-	qvadra[1].position = Vector2f(799, 1);
-	qvadra[2].position = Vector2f(799, 404);
-	qvadra[3].position = Vector2f(1, 404);
+	qvadra[1].position = Vector2f(wid - 1, 1);
+	qvadra[2].position = Vector2f(wid - 1, hei - 1);
+	qvadra[3].position = Vector2f(1, hei - 1);
 	qvadra[4].position = Vector2f(1, 1);
 
 	int i = 0;
@@ -67,12 +116,11 @@ int main()
 
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 	wifstream fin;
-	//	ofstream fout("input.txt");
-	///////////////////////////////////////////////////
 
 	wstring str[23];  // ◊ÚÂÌËÂ ÚÂÍÒÚ‡ ‚ Ï‡ÒÒË‚
+	createCopy();
 	Text text[23];
-	refreshFile(fin, text, str, krs->stb,int(krs->y));
+	refreshStr(fin, text, str, krs->fy, int(krs->y));
 	///////////////////////////////////////////////////
 
 	Font font;
@@ -85,12 +133,20 @@ int main()
 		text[i].setPosition(2, i * 15 + 2);
 		text[i].setColor(Color::Black);
 	}
+	Text quit;
+	quit.setCharacterSize(10);
+	quit.setFont(font);
+	quit.setString(L"—Óı‡ÌËÚ¸ ËÁÏÂÌÂÌËˇ? (1 - ‰‡,2 - ÌÂÚ)");
+	quit.setPosition(2, 2);
+	quit.setColor(Color::Black);
+
 	////////////////////////////////////////////////////
 
 	Clock clock;
 	float timer = 0;
 	bool bt = true;
-	RenderWindow window(sf::VideoMode(700, 350), "Wordpad");
+	RenderWindow window(sf::VideoMode(wid, hei), "Wordpad");
+	window.setVerticalSyncEnabled(true);
 	while (window.isOpen()) 
 	{
 		float time = clock.getElapsedTime().asSeconds();
@@ -109,169 +165,245 @@ int main()
 				lines[1].color = sf::Color::Black;
 			}
 			timer = 0; 
-			if (bt) bt = false; else bt = true; 
+			bt = bt ? false : true;
 		};
-
 
 		Event event;
 		while (window.pollEvent(event))
 		{
-			if (event.type == Event::Closed)
-				window.close();
 			if (Keyboard::isKeyPressed(Keyboard::Up))
 			{
-				if ( krs->y > 1)
+				krsrun(lines, bt, timer);
+				if (krs->fy > 1)//ƒ¬»∆≈Õ»≈ › –¿Õ¿ ¬¬≈–’
 				{
-					krs->y--;
-					krs->stb--;
-					if (krs->str > str[int(krs->y - 1)].length())
+					krs->fy--;
+					if (krs->y > 1)  //ƒ¬»∆≈Õ»≈  ”–—Œ–¿ ¬¬≈–’
+						krs->y--;
+					else
+					refreshStr(fin, text, str, krs->fy, int(krs->y));
+					if (str[int(krs->y - 1)].length() + 1 < krs->fx)//»«Ã≈Õ≈Õ»ﬂ  ŒŒ–ƒ»Õ¿“€ ’  ”–—Œ–¿, ≈—À» —“–Œ ¿ ¬€ÿ≈ Ã≈Õ‹ÿ≈ œŒ ƒÀ»Õ≈
 					{
-						krs->str = str[int(krs->y - 1)].length() + 1;
-						if (krs->str > 87)
+						krs->fx = str[int(krs->y - 1)].length() + 1;
+						if (krs->fx > 30)
 						{
 							for (i = 0; i < 23; i++)
-								text[i].setPosition(2 - (str[int(krs->y) - 1].length() - 87) * 8, i * 15 + 2);
-							krs->x = 87;
+								text[i].setPosition(2 - (krs->fx - 30) * 8, i * 15 + 2);
+							krs->x = 30;
 						}
 						else
 						{
 							for (i = 0; i < 23; i++)
 								text[i].setPosition(2, i * 15 + 2);
-							krs->x = str[int(krs->y) - 1].length() + 1;
+							krs->x = krs->fx;
 						}
 					}
 				}
-				else
-				{
-					if (krs->stb > 1)
-					{
-						krs->stb--;
-						refreshFile(fin, text, str, krs->stb-1);
-					}
-				}
-				krsrun(lines, bt, timer);
 			}
 			if (Keyboard::isKeyPressed(Keyboard::Down))
 			{
-				if (krs->y < 23)
-				{
-					krs->y++;
-					krs->stb++;
-				}
-				else
-				{
-					if (chkfl(fin,krs->stb))
-					{
-						refreshFile(fin, text, str, krs->stb-21);
-						krs->stb++;
-
-					}
-				}
-					krsrun(lines, bt, timer);
-			}
-			if (Keyboard::isKeyPressed(Keyboard::Left))
-			{
-				if (krs->x > 1) //œÓÒÚÓÂ ‰‚ËÊÂÌËÂ ÍÛÒÓ‡
-				{
-					krs->x--;
-					krs->str--;
-				}
-				else
-				{
-					if (krs->str > 1)
-					{
-						if (krs->str - krs->x > 30) //≈ÒÎË ‰ÓÒÚË„ÌÛÚ ÎÂ‚˚È Í‡È Ë ÌÂ ‰ÓÒÚË„ÌÛÚ Í‡È Ù‡ÈÎ‡
-						{
-							krs->str--;
-							for (i = 0; i < 23; i++)
-							text[i].setPosition(2 - (krs->str - 30) * 8, i * 15 + 2);
-							krs->x += 30;
-						}
-						else 
-						{
-							krs->str--;
-							for (i = 0; i < 23; i++)
-							text[i].setPosition(2 , i * 15 + 2); //≈ÒÎË ‰ÓÒÚË„ÌÛÚ ÎÂ‚˚È Í‡È Ë Í‡È Ù‡ÈÎ‡
-							krs->x = krs->str;
-						}
-					}
-					else
-					{
-						if (krs->stb > 1) //œÂÂıÓ‰ Ì‡ ÒÚÓÍÛ ‚˚¯Â
-						{
-							krs->stb--;
-							krs->str = str[krs->stb - 1].length() + 1;
-							krs->x = krs->str >= 88 ? 88 : krs->str % 89;
-							if (krs->y > 1)
-								krs->y--;
-							else
-								refreshFile(fin, text, str, krs->stb, int(krs->y));
-							if (krs->str > 88)
-								for (i = 0; i < 23; i++)
-									text[i].setPosition(2 - (krs->str - 88) * 8, i * 15 + 2);
-							}
-					}
-				}
-
-
 				krsrun(lines, bt, timer);
-			}
-			if (Keyboard::isKeyPressed(Keyboard::Right))
-			{
-				if (str[int (krs->y) - 1].length() >= krs->str)
+				if (chkfl(fin, krs->fy))//ƒ¬»∆≈Õ»≈ › –¿Õ¿ ¬Õ»«
 				{
-					if (krs->x < 88 /*&& */)  // œÓÒÚÓÂ ‰‚ËÊÂÌËÂ ÍÛÒÓ‡
-					{
-						krs->x++;
-						krs->str++;
-					}
+					krs->fy++;
+					if (krs->y < hei / 15)  //ƒ¬»∆≈Õ»≈  ”–—Œ–¿ ¬Õ»«
+						krs->y++;
 					else
+					refreshStr(fin, text, str, krs->fy, int(krs->y));
+					if (str[int(krs->y - 1)].length() + 1 < krs->fx)//»«Ã≈Õ≈Õ»ﬂ  ŒŒ–ƒ»Õ¿“€ ’  ”–—Œ–¿, ≈—À» —“–Œ ¿ Õ»∆≈ Ã≈Õ‹ÿ≈ œŒ ƒÀ»Õ≈
 					{
-						if (str[int(krs->y) - 1].length() > krs->str)
+						krs->fx = str[int(krs->y - 1)].length() + 1;
+						if (krs->fx > 30)
 						{
-							if ((str[int(krs->y) - 1].length() - krs->str) > 30)
-							{
-								krs->str++;
-								for (i = 0; i < 23; i++)
-									text[i].setPosition(2 - (krs->str - 57) * 8, i * 15 + 2);//ƒÓÒÚË„ÌÛÚ Ô‡‚˚È Í‡È ˝Í‡Ì‡,ÌÂ ‰ÓÒÚË„ÌÛÚ Ô‡‚˚È Í‡È ÒÚÓÍË
-								krs->x -= 30;
-							}
-							else
-							{
-								krs->str++;
-								for (i = 0; i < 23; i++)
-									text[i].setPosition(2 - (str[int(krs->y) - 1].length() - 87) * 8, i * 15 + 2); //ƒÓÒÚË„ÌÛÚ Ô‡‚˚È Í‡È ˝Í‡Ì‡,‰ÓÒÚË„ÌÛÚ Ô‡‚˚È Í‡È ÒÚÓÍË
-								krs->x -= str[int(krs->y) - 1].length() - krs->str;
-							}
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2 - (krs->fx - 30) * 8, i * 15 + 2);
+							krs->x = 30;
 						}
 						else
 						{
-							if (!chkfl(fin, krs->stb))
-							{
-								krs->stb++;
-								krs->str = 1;
-								for (i = 0; i < 23; i++)
-									text[i].setPosition(2, i * 15 + 2);
-								if (krs->y < 23)
-									krs->y++;
-								krs->x = 1;
-							}
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2, i * 15 + 2);
+							krs->x = krs->fx;
+						}
+					}
+				}
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Left))
+			{
+				krsrun(lines, bt, timer);
+				if (krs->fx > 1)
+				{
+					krs->fx--;
+					if (krs->x > 1)//ƒ¬»∆≈Õ»≈  ”–—Œ–¿ ¬À≈¬Œ
+						krs->x--;
+					else//ƒ¬»∆≈Õ»≈ › –¿Õ¿ ¬À≈¬Œ
+					{
+						if (krs->fx > 30)//—ƒ¬»√ › –¿Õ¿ Õ¿ 30
+						{
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2 - (krs->fx - 30) * 8, i * 15 + 2);
+							krs->x = 30;
+						}
+						else//—ƒ¬»√ › –¿Õ¿ Õ¿ fx
+						{
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2, i * 15 + 2);
+							krs->x = krs->fx;
+						}
+					}
+				}
+				else//œ≈–≈’Œƒ Õ¿ œ–≈ƒ —“–Œ ”
+				{
+					if (krs->fy > 1)
+					{
+						krs->fy--;
+						if (krs->y > 1)
+							krs->y--;
+						else
+						refreshStr(fin, text, str, krs->fy, int(krs->y));
+						krs->fx = str[int(krs->y - 1)].length() + 1;
+						if (str[int(krs->y - 1)].length() > wid / 8)//
+						{
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2 - (krs->fx - wid / 8) * 8, i * 15 + 2);
+							krs->x = wid / 8;
+						}
+						else //
+						{
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2, i * 15 + 2);
+							krs->x = krs->fx;
+						}
+					}
+				}
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Right))
+			{
+				krsrun(lines, bt, timer);
+				if (krs->fx < str[int(krs->y - 1)].length() + 1)
+				{
+					krs->fx++;
+					if (krs->x < 88)//ƒ¬»∆≈Õ»≈  ”–—Œ–¿ ¬œ–¿¬Œ
+						krs->x++;
+					else//ƒ¬»∆≈Õ»≈ › –¿Õ¿ ¬œ–¿¬Œ
+					{
+						if (str[int(krs->y - 1)].length() + 1 - krs->fx > 30)//—ƒ¬»√ › –¿Õ¿ Õ¿ 30
+						{
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2 - (krs->fx - 58) * 8, i * 15 + 2);
+							krs->x = 58;
+						}
+						else//—ƒ¬»√ › –¿Õ¿ Õ¿ x
+						{
+							for (i = 0; i < 23; i++)
+								text[i].setPosition(2 - (int(str[int(krs->y - 1)].length()) - wid / 8) * 8, i * 15 + 2);
+							krs->x = wid / 8 - (str[int(krs->y - 1)].length() - krs->fx);
 						}
 					}
 				}
 				else
 				{
+					if (chkfl(fin, krs->fy))//œ≈–≈’Œƒ Õ¿ —À≈ƒ —“–Œ ”
+					{
 
+						krs->fy++;
+						if (krs->y < 23)
+							krs->y++;
+						else
+						refreshStr(fin, text, str, krs->fy, int(krs->y));
+						krs->fx = 1;
+						for (i = 0; i < 23; i++)
+							text[i].setPosition(2, i * 15 + 2);
+						krs->x = 1;
+					}
 				}
-				krsrun(lines, bt, timer);
 			}
-			////////////////////////////////////////////
-			if (Keyboard::isKeyPressed(Keyboard::F5))
+			if (Keyboard::isKeyPressed(Keyboard::BackSpace))
 			{
-				refreshFile(fin, text, str, krs->stb - (krs->y + 1));
+				do
+				{
+					bool frt = true;
+					if (krs->fx > 1)
+					{
+						str[krs->y - 1] = str[krs->y - 1].substr(0, krs->x - 2) + str[krs->y - 1].substr(krs->x - 1, str[krs->y - 1].size() - krs->x + 1);
+						text[krs->y - 1].setString(str[krs->y - 1]);
+						krs->fx--;
+						krs->x--;
+						refreshFile(krs->fy - 1, str[krs->y - 1]);
+						frt ? sleep(milliseconds(250)) : frt = false, sleep(milliseconds(30));
+					}
+				} while (!event.type == Event::KeyReleased);
 			}
-//			if (event.type == Event::MouseButtonPressed);
-			lines[0].position = Vector2f(krs->x * 8 - 6, krs->y * 15 -12 );
+			if (Keyboard::isKeyPressed(Keyboard::Return))
+			{
+				str[krs->y - 1] = str[krs->y - 1].substr(0, krs->x - 1) + '\n' + str[krs->y - 1].substr(krs->x - 1, str[krs->y - 1].size() - krs->x + 1);
+				refreshFile(krs->fy - 1, str[krs->y - 1]);
+				krs->fx = 1;
+				krs->x = 1;
+				krs->fy++;
+				krs->y++;
+				refreshStr(fin, text, str, krs->fy, int(krs->y));
+				sleep(milliseconds(150));
+			}
+			if (event.type == sf::Event::Resized)
+			{
+				wid = event.size.width;
+				hei = event.size.height;
+			}
+			if (event.type == Event::TextEntered) 
+			{
+				if (event.text.unicode > 31)
+				{
+					str[krs->y - 1] = str[krs->y - 1].substr(0, krs->x - 1) + event.text.unicode + str[krs->y - 1].substr(krs->x - 1, str[krs->y - 1].size() - krs->x + 1);
+					text[krs->y - 1].setString(str[krs->y - 1]);
+					krs->fx++;
+					krs->x++;
+					refreshFile(krs->fy - 1, str[krs->y - 1]);
+				}
+			}
+	/*		if (event.type == sf::Event::LostFocus)
+			{
+				window.pause();
+			}*/
+			if (event.type == Event::Closed)
+			{
+				RenderWindow window2(sf::VideoMode(200, 150), "Quit"/*,Style::None*/);
+				while (window.isOpen())
+				{
+
+					while (window2.pollEvent(event))
+					{
+						if (event.type == Event::Closed)
+							window2.close();
+						if (event.type == Event::TextEntered)
+						{
+							if (event.text.unicode == '1')
+							{
+								window2.close();
+								rename("input.txt", "input_copy2.txt");
+								rename("input_copy.txt", "input.txt");
+								remove("input_copy2.txt");
+								window.close();
+							}
+							if (event.text.unicode == '2')
+							{
+								window2.close();
+								remove("input_copy.txt");
+								window.close();
+							}
+						}
+					}
+					window2.clear(Color::White);
+					window2.draw(quit);
+					window2.display();
+				}
+			}
+	/*	if (event.type == sf::Event::GainedFocus)
+			{
+				window.resume();
+			}*/
+
+			////////////////////////////////////////////
+			lines[0].position = Vector2f(krs->x * 8 - 6, krs->y * 15 - 12);
 			lines[1].position = Vector2f(krs->x * 8 - 6, krs->y * 15 + 5);
 		}
 ////////////////////////////////////////////////////////
@@ -284,32 +416,5 @@ int main()
 		window.draw(lines);
 		window.display();
 	}
-
 	return 0;
-}
-
-bool chkfl(wifstream &fin, int stb)
-{
-	wstring str;
-	int i;
-	fin.open("input.txt");
-	for (i = 0; !fin.eof(); i++) { getline(fin, str); }
-	fin.close();
-	if (i > stb)
-		return true;
-	else
-		return false;
-}
-
-void krsrun(VertexArray &lines, bool &bt, float &timer)
-{
-	lines[0].color = Color::Black;
-	lines[1].color = Color::Black;
-	bt = true;
-	timer = 0;
-}
-
-void delbkv(wstring *str, int x, int y)
-{
-
 }
